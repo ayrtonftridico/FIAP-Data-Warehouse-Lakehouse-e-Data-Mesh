@@ -18,7 +18,7 @@ Ao final deste roteiro, o seu Codespaces estará sincronizado com o repositório
 > [!TIP]
 > Se o professor não pediu para atualizar o código do repositório, pule para o passo 3.
 
-1. Acesse o repositório do seu fork da disciplina `fiap-cloud-based-analytics` no GitHub.
+1. Acesse o repositório do seu fork da disciplina `FIAP-Data-Warehouse-Lakehouse-e-Data-Mesh` no GitHub.
 2. Clique em `Sync fork`. Caso exista algo para sincronizar, clique em `Update branch`.
 
 ![](img/sync1.png)

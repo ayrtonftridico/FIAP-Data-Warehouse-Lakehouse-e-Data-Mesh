@@ -37,7 +37,7 @@ Ao final desta etapa, o ambiente base do Athena estará pronto para o laboratór
 2. No terminal, execute o script abaixo para preparar automaticamente o ambiente do laboratório no Athena, baixando os dados TPC-DS, enviando-os ao S3 e criando as tabelas necessárias:
 
 ```bash
-cd /workspaces/fiap-cloud-based-analytics && bash setup_athena_tpcds.sh
+cd /workspaces/FIAP-Data-Warehouse-Lakehouse-e-Data-Mesh && bash setup_athena_tpcds.sh
 ```
 
 <details>

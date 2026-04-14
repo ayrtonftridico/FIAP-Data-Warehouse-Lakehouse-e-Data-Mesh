@@ -22,13 +22,22 @@ Ao final deste laboratório, você terá criado uma tabela particionada, aplicad
 > [!IMPORTANT]
 > Este laboratório pressupõe que o banco `athena_iceberg_db` já exista e que o ambiente TPC-DS já tenha sido preparado no Athena.
 
+## Pré-requisitos rápidos
+
+Antes de seguir, confirme se:
+
+- o laboratório básico anterior já foi concluído
+- o banco `athena_iceberg_db` já existe
+- a tabela de origem `tpcds.prepared_web_sales` está acessível no Athena
+- o local de saída das consultas no Athena já foi configurado
+
 ---
 
 ## Parte 1 - Particionamento oculto
 
-### Objetivo desta parte
+### Resultado esperado desta parte
 
-Criar uma tabela Iceberg particionada por ano e validar que o Athena aplica pruning automaticamente durante a leitura.
+Ao final desta etapa, você terá criado uma tabela Iceberg particionada por ano e validado que o Athena aplica pruning automaticamente durante a leitura.
 
 O particionamento oculto do Iceberg é uma melhoria sobre a abordagem tradicional do Hive. Em vez de o consumidor precisar conhecer explicitamente as colunas e valores de partição, o Iceberg consegue derivar e usar essas informações automaticamente.
 
@@ -204,9 +213,9 @@ Se você chegou até aqui, então:
 
 ## Parte 2 - Atualizar, excluir ou inserir linhas condicionalmente com MERGE
 
-### Objetivo desta parte
+### Resultado esperado desta parte
 
-Usar uma tabela auxiliar para aplicar inserções, atualizações e exclusões condicionais na tabela de destino.
+Ao final desta etapa, você terá usado uma tabela auxiliar para aplicar inserções, atualizações e exclusões condicionais na tabela de destino.
 
 O comando [`MERGE INTO`](https://docs.aws.amazon.com/athena/latest/ug/merge-into-statement.html) é transacional e combina `UPDATE`, `DELETE` e `INSERT` em uma única instrução.
 
@@ -375,9 +384,9 @@ Se você chegou até aqui, então:
 
 ## Parte 3 - Otimizando tabelas Iceberg
 
-### Objetivo desta parte
+### Resultado esperado desta parte
 
-Usar `OPTIMIZE` para reorganizar os arquivos da tabela e melhorar eficiência de leitura.
+Ao final desta etapa, você terá usado `OPTIMIZE` para reorganizar os arquivos da tabela e melhorar a eficiência de leitura.
 
 À medida que os dados se acumulam em uma tabela Iceberg, as consultas podem se tornar menos eficientes por causa da quantidade de arquivos a serem abertos e do custo extra de aplicar arquivos de exclusão.
 

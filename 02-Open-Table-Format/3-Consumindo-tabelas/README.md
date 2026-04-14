@@ -22,6 +22,9 @@ Você consultará as tabelas `web_sales_iceberg` e `customer_iceberg` que foram 
 > [!IMPORTANT]
 > Esta parte depende diretamente dos laboratórios anteriores. Se as tabelas ainda não existirem, volte e conclua os exercícios anteriores antes de continuar.
 
+> [!NOTE]
+> Se aparecer erro de tabela inexistente, valide primeiro se o banco selecionado no painel esquerdo do Athena corresponde ao laboratório em que você criou as tabelas.
+
 ---
 
 ## Parte 1 - Escolhendo o banco correto

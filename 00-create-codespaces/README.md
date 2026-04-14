@@ -31,7 +31,7 @@ Você irá utilizar 2 ferramentas para desenvolver os laboratórios:
 Ao final desta etapa, você terá um Codespaces criado a partir do repositório da disciplina e pronto para uso.
 
 1. Vamos utilizar sua conta do GitHub para acessar o Codespaces. Caso não tenha uma conta, crie uma em [github.com](https://github.com).
-2. Primeiro, faça o fork do repositório que contém os exercícios da disciplina. Acesse o link [fiap-cloud-based-analytics](https://github.com/vamperst/fiap-cloud-based-analytics).
+2. Primeiro, faça o fork do repositório que contém os exercícios da disciplina. Acesse o link [FIAP-Data-Warehouse-Lakehouse-e-Data-Mesh](https://github.com/vamperst/FIAP-Data-Warehouse-Lakehouse-e-Data-Mesh).
 3. No canto superior da tela haverá o botão `Fork` para você copiar o repositório para sua conta do GitHub. Clique nele para copiar o repositório para sua conta.
 
 ![](img/fork1-1.png)
@@ -49,7 +49,7 @@ Ao final desta etapa, você terá um Codespaces criado a partir do repositório 
 ![](img/codespaces2.png)
 
 7. Deixe as opções da tela da seguinte forma e clique em `Create Codespace`:
-   1. repository: `fiap-cloud-based-analytics`
+   1. repository: `FIAP-Data-Warehouse-Lakehouse-e-Data-Mesh`
    2. Branch: `master`
    3. Dev container configuration: `FIAP Lab`
    4. Region: `US East`
@@ -222,7 +222,7 @@ Antes de encerrar, confirme se você já fez tudo abaixo:
 **Pronto. Seu ambiente está configurado e pronto para começar os laboratórios.**
 
 > [!WARNING]
-> O passo de copiar as credenciais para o Codespaces é necessário para executar os comandos da AWS. Caso você feche o Codespaces e abra novamente, mas inda estiver dentro do período de validade da sessão do AWS Academy, as credenciais continuarão funcionando. Caso contrário, será necessário copiar as credenciais novamente.
+> O passo de copiar as credenciais para o Codespaces é necessário para executar os comandos da AWS. Caso você feche o Codespaces e abra novamente, mas ainda esteja dentro do período de validade da sessão do AWS Academy, as credenciais continuarão funcionando. Caso contrário, será necessário copiar as credenciais novamente.
 
 > [!CAUTION]
 > **SEMPRE DESLIGUE** o ambiente ao final de cada aula para não gerar custos extras nem consumir suas horas gratuitas no Codespaces. Para desligar, acesse [GitHub Codespaces](https://github.com/codespaces), clique nos 3 pontinhos ao lado do ambiente e depois em `Stop Codespace`.

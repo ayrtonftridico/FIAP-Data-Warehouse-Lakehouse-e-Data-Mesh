@@ -63,7 +63,7 @@ export bucket=$(aws s3 ls | awk '/base-config-/ {print $3; exit}') && echo $buck
 3. Entre na pasta correta para executar o exercício:
 
 ```bash
-cd /workspaces/fiap-cloud-based-analytics/01-Storage/01-Storage-de-Objetos
+cd /workspaces/FIAP-Data-Warehouse-Lakehouse-e-Data-Mesh/01-Storage/01-Storage-de-Objetos
 ```
 
 4. Baixe os 3 arquivos CSV que servirão de exemplo para o exercício:
