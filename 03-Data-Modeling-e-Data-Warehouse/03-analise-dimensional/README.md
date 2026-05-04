@@ -261,6 +261,21 @@ WHERE schemaname = 'dw_star'
 ![](img/mv_status_ok.png)
 
 <details>
+<summary><b>⚠ Se <code>is_stale = true</code> ou <code>autorefresh = false</code></b></summary>
+<blockquote>
+
+A MV pode ficar desatualizada se houve mudança nas tabelas base e o refresh automático ainda não rodou. Force um refresh manual:
+
+```sql
+REFRESH MATERIALIZED VIEW dw_star.mv_receita_liquida_v2_mensal;
+```
+
+Se `autorefresh = false` mesmo após o `CREATE`, a MV pode ter operadores que o Redshift considera incompatíveis com auto refresh (funções não-determinísticas, algumas window functions). Simplifique a query e recrie.
+
+</blockquote>
+</details>
+
+<details>
 <summary><b>💡 Clique para entender: Materialized Views no Redshift</b></summary>
 <blockquote>
 
@@ -726,6 +741,15 @@ ORDER BY d.nr_ano, d.nr_mes, g.nm_regiao, c.sg_segmento;
      Canto inferior do Query Editor v2 mostrando "Query executed in: Xs". Esse é o baseline. -->
 ![](img/baseline_execution_time.png)
 
+<details>
+<summary><b>⚠ Se os 3 tempos variam muito entre si</b></summary>
+<blockquote>
+
+A primeira execução inclui **compilação de plano** e **carregamento de blocos em cache**, então costuma ser bem mais lenta. Rode **3 vezes** e use a **mediana** — nunca confie em uma única medição. Se as 3 continuarem divergentes, espere 1 minuto (pode haver outra query em paralelo no cluster) e meça de novo.
+
+</blockquote>
+</details>
+
 21. Olhe o plano da query. Procure por `DS_DIST_KEY`, `DS_BCAST_INNER` ou `DS_DIST_INNER` — são indicadores de redistribuição:
 
 ```sql
@@ -800,6 +824,23 @@ VACUUM dw_star.f_vendas;
 ```
 
 <details>
+<summary><b>⚠ Se o redesign demorar muito</b></summary>
+<blockquote>
+
+Recriar `f_vendas` com dados copiados envolve mover 6M linhas. Em `ra3.large` single-node isso leva tipicamente **1 a 3 minutos** — é esperado, não é travamento. O `VACUUM` no final adiciona mais ~30 segundos.
+
+Se passar de 5 minutos, abra outra aba e confira se o cluster não está bloqueado por outra query concorrente:
+
+```sql
+SELECT pid, starttime, TRIM(query) AS query
+FROM stv_recents
+WHERE status = 'Running';
+```
+
+</blockquote>
+</details>
+
+<details>
 <summary><b>💡 Clique para entender: por que DISTKEY(data_sk) agora?</b></summary>
 <blockquote>
 
@@ -840,6 +881,31 @@ JOIN dw_star.dim_customer  c ON c.customer_sk  = f.customer_sk
 GROUP BY d.nr_ano, d.nr_mes, g.nm_regiao, c.sg_segmento
 ORDER BY d.nr_ano, d.nr_mes, g.nm_regiao, c.sg_segmento;
 ```
+
+<details>
+<summary><b>⚠ Se a query continuar lenta mesmo após redistkey</b></summary>
+<blockquote>
+
+Duas causas mais comuns:
+
+1. **Estatísticas desatualizadas**. Verifique que o `ANALYZE` do passo 22 rodou até o fim. Rode de novo:
+
+   ```sql
+   ANALYZE dw_star.f_vendas;
+   ```
+
+2. **Skew alto** (distribuição desigual entre slices). Meses com muito mais vendas que outros geram desbalanceamento:
+
+   ```sql
+   SELECT "schema", "table", diststyle, sortkey1, size, tbl_rows, skew_rows
+   FROM svv_table_info
+   WHERE "schema" = 'dw_star' AND "table" = 'f_vendas';
+   ```
+
+   `skew_rows` alto (acima de 1.5) indica desbalanceamento e explica por que a redistkey sozinha não resolveu. Considere partir para a **Estratégia B (MV pré-agregada)** abaixo.
+
+</blockquote>
+</details>
 
 ### Estratégia B — Materialized View pré-agregada
 
@@ -1146,63 +1212,3 @@ Se você chegou até aqui, você aplicou:
 
 Este é o fechamento da trilha de Data Modeling + Data Warehouse. Você construiu um warehouse, sentiu as escolhas de modelagem impactarem números concretos, viu como a evolução do negócio força o modelo a se adaptar e aprendeu a limpar tudo para preservar o budget.
 
----
-
-## Onde tirar os prints
-
-| # | Arquivo | Contexto a capturar |
-|---|---------|---------------------|
-| 1 | `img/dw_star_tables_ok.png` | Listagem das 6 tabelas do schema `dw_star` |
-| 2 | `img/pct_comissao_distribuicao.png` | 10 faixas de comissão com ~1000 fornecedores cada |
-| 3 | `img/v1_vs_v2_total.png` | Totais v1 e v2 com diferença absoluta |
-| 4 | `img/mv_status_ok.png` | `svv_mv_info` mostrando `is_stale=false`, `autorefresh=t` |
-| 5 | `img/v1_v2_por_ano.png` | Tabela ano a ano com diferença percentual |
-| 6 | `img/explain_view_vs_mv.png` | Planos de EXPLAIN lado a lado |
-| 7 | `img/scd2_ativos_19960601.png` | Contagem de ativos em data específica (SCD2) |
-| 8 | `img/snapshot_vs_scd2_queries.png` | Resultados das 3 perguntas nas duas abordagens |
-| 9 | `img/baseline_execution_time.png` | Tempo de execução da query-alvo no baseline |
-| 10 | `img/mv_dashboard_execution_time.png` | Tempo ordens de grandeza menor via MV |
-| 11 | `img/stl_query_comparison.png` | Últimas 20 execuções via `stl_query` |
-| 12 | `img/codespaces_terminal_aberto.png` | Terminal do Codespaces pronto para o teardown |
-| 13 | `img/terraform_output_antes_destroy.png` | `terraform output` listando os recursos ativos |
-| 14 | `img/aws_cleanup_verificado.png` | Os 3 comandos AWS CLI retornando vazio após o destroy |
-
-**Como tirar**: `Cmd+Shift+4` (macOS) ou `Print Screen` (Windows). Salve como PNG em `03-Data-Modeling-e-Data-Warehouse/03-analise-dimensional/img/`.
-
----
-
-## Troubleshooting
-
-### MV não refresca / aparece como stale
-
-```sql
-SELECT schemaname, name, is_stale, autorefresh
-FROM svv_mv_info
-WHERE schemaname = 'dw_star';
-```
-
-Se `autorefresh = false`, rode refresh manual:
-
-```sql
-REFRESH MATERIALIZED VIEW dw_star.mv_dashboard_executivo;
-```
-
-### Redistkey demora muito
-
-Recriar `f_vendas` com dados copiados envolve mover 6M linhas. Em `ra3.large` single-node pode levar 1-3 minutos. É esperado.
-
-### `EXPLAIN ANALYZE` mostra tempos muito diferentes em execuções seguidas
-
-Primeira execução inclui compilação de plano e carregamento de blocos em cache. Rode **3 vezes** e use a mediana. Não confie em uma única medição.
-
-### A query do CEO continua lenta mesmo após redistkey
-
-Verifique se o `ANALYZE` rodou e se a tabela não tem skew alto:
-
-```sql
-SELECT "schema", "table", diststyle, sortkey1, size, tbl_rows, skew_rows
-FROM svv_table_info
-WHERE "schema" = 'dw_star' AND "table" = 'f_vendas';
-```
-
-`skew_rows` alto indica desbalanceamento entre slices — pode ser o caso se a distribuição por `data_sk` tiver meses muito desiguais.

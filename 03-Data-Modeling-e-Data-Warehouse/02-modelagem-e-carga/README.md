@@ -592,8 +592,29 @@ ORDER BY tbl;
      Essa é a evidência de que o COPY funcionou corretamente. -->
 ![](img/oltp_sanity_check.png)
 
-> [!IMPORTANT]
-> Se alguma contagem **não bater**, o `COPY` falhou para aquela tabela. Consulte a tabela de erros com `SELECT filename, line_number, colname, err_reason FROM stl_load_errors ORDER BY starttime DESC LIMIT 10;`
+<details>
+<summary><b>⚠ Se alguma contagem não bater, o <code>COPY</code> falhou em alguma tabela</b></summary>
+<blockquote>
+
+Consulte a tabela de erros de carga do Redshift:
+
+```sql
+SELECT filename, line_number, colname, err_reason
+FROM stl_load_errors
+ORDER BY starttime DESC
+LIMIT 10;
+```
+
+A causa mais comum é o bucket S3 estar vazio ou com caminho diferente. Confirme do terminal do Codespaces:
+
+```bash
+aws s3 ls "s3://dw-lab-$(aws sts get-caller-identity --query Account --output text)/raw/tpch/" --recursive
+```
+
+Se o bucket estiver vazio, volte para o Lab 03.0 e rode `bash scripts/load_tpch.sh` novamente.
+
+</blockquote>
+</details>
 
 10. Execute a query-âncora pela primeira vez, no modelo OLTP:
 
@@ -747,6 +768,23 @@ O esperado é 2557 linhas, de 1992-01-01 a 1998-12-31.
 <!-- PRINT SUGERIDO: img/dim_data_loaded.png
      Resultado mostrando 2557 linhas e as datas extremas. -->
 ![](img/dim_data_loaded.png)
+
+<details>
+<summary><b>⚠ Se a <code>dim_data</code> veio com janela errada ou vazia</b></summary>
+<blockquote>
+
+Em cluster recém-criado, a system table `stl_plan_info` usada no CTE `numeros` pode ter poucas linhas, o que pode gerar uma `dim_data` incompleta. Use o fallback com **CTE recursiva** descrito no bloco "Fallback com CTE recursiva" dentro do passo 12, acima.
+
+Confirme se o range está certo:
+
+```sql
+SELECT MIN(dt_completa), MAX(dt_completa) FROM dw_star.dim_data;
+```
+
+Se a janela estiver fora de 1992-01-01 a 1998-12-31, as queries-âncora dos passos 17 e 25 vão retornar vazio por não acharem `nr_ano = 1995`.
+
+</blockquote>
+</details>
 
 <details>
 <summary><b>💡 Clique para entender: por que gerar dim_data em vez de trazer de uma tabela</b></summary>
@@ -1492,66 +1530,6 @@ Este laboratório serve como base para o próximo exercício, onde você vai sen
 
 ---
 
-## Onde tirar os prints
-
-Para quem quer ajudar na documentação visual, os pontos sugeridos para captura estão marcados no arquivo acima como `<!-- PRINT SUGERIDO: ... -->` (invisíveis no markdown renderizado mas visíveis no código-fonte). Em resumo:
-
-| # | Arquivo | Contexto a capturar |
-|---|---------|--------------------|
-| 1 | `img/redshift_query_editor_landing.png` | Tela inicial do Query Editor v2 no console AWS |
-| 2 | `img/redshift_create_connection.png` | Menu de contexto no cluster com "Create connection" destacado |
-| 3 | `img/redshift_connection_form.png` | Caixa de autenticação preenchida (senha coberta) |
-| 4 | `img/redshift_first_query.png` | Resultado de `SELECT current_database()...` |
-| 5 | `img/oltp_create_schema_success.png` | Mensagem de sucesso após `CREATE SCHEMA` + 8 `CREATE TABLE` |
-| 6 | `img/redshift_account_id.png` | Resultado de `current_aws_account()` |
-| 7 | `img/oltp_sanity_check.png` | 8 linhas do `SELECT UNION ALL` mostrando contagens |
-| 8 | `img/query_ancora_N1.png` | Resultado da query-âncora no OLTP — `N₁` |
-| 9 | `img/dim_data_loaded.png` | Resultado de `SELECT COUNT(*), MIN, MAX FROM dim_data` |
-| 10 | `img/dw_star_dims_loaded.png` | Contagem das 5 dimensões do star schema |
-| 11 | `img/query_ancora_N2.png` | Resultado da query-âncora no star SCD1 — `N₂` |
-| 12 | `img/explain_oltp_vs_star.png` | Planos de execução lado a lado |
-| 13 | `img/customer_history_loaded.png` | ~7500 linhas de `customer_history` |
-| 14 | `img/scd2_integrity_checks.png` | 3 checks de integridade SCD2 com zero violações |
-| 15 | `img/query_ancora_N3.png` | Resultado da query-âncora no SCD2 — `N₃` (diferente!) |
-| 16 | `img/reclassificacao_quantitativa.png` | Clientes que entraram/saíram de AUTOMOBILE |
-
-**Como tirar**: use `Cmd+Shift+4` no macOS ou `Print Screen` no Windows, salve como PNG, rename para o padrão sugerido e coloque em `03-Data-Modeling-e-Data-Warehouse/02-modelagem-e-carga/img/`.
-
----
-
 ## Próximo passo
 
 No [Lab 03.2](../03-analise-dimensional/README.md) você vai partir do schema que escolheu aqui e ver o que acontece quando o **negócio evolui**: nova fórmula de receita, redefinição de "cliente ativo", SLA apertado de dashboard.
-
----
-
-## Troubleshooting
-
-### `COPY` falha com `Check 'stl_load_errors' for details`
-
-```sql
-SELECT filename, line_number, colname, err_reason
-FROM stl_load_errors
-ORDER BY starttime DESC
-LIMIT 10;
-```
-
-Causa mais comum: bucket S3 não existe ou não tem Parquet. Verifique no Codespaces:
-
-```bash
-aws s3 ls "s3://dw-lab-$(aws sts get-caller-identity --query Account --output text)/raw/tpch/" --recursive
-```
-
-### Query-âncora retorna vazio
-
-Provavelmente a `dim_data` foi gerada para janela diferente. Confira:
-
-```sql
-SELECT MIN(dt_completa), MAX(dt_completa) FROM dw_star.dim_data;
-```
-
-Deve cobrir 1992-01-01 a 1998-12-31.
-
-### `stl_plan_info` vazia ao gerar `dim_data`
-
-Em cluster recém-criado, essa system table pode ter poucas linhas. Use o fallback com CTE recursiva descrito no bloco "Fallback com CTE recursiva" do passo 12.

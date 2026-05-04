@@ -69,6 +69,20 @@ glue_database_name = "tpch_raw_12345678"
 ```
 
 <details>
+<summary><b>⚠ Se der erro: <code>InvalidSubnet: No default VPC for this user</code></b></summary>
+<blockquote>
+
+Alguma conta do Learner Lab não vem com VPC default. Crie uma e rode `apply` novamente:
+
+```bash
+aws ec2 create-default-vpc
+terraform apply
+```
+
+</blockquote>
+</details>
+
+<details>
 <summary><b>💡 Clique para entender: por que tantos outputs?</b></summary>
 <blockquote>
 
@@ -122,6 +136,21 @@ Isso cria um cenário real: "o cliente X comprou em 1995 quando era `AUTOMOBILE`
 </blockquote>
 </details>
 
+<details>
+<summary><b>⚠ Se der erro: <code>load_tpch.sh</code> falha com <code>import pandas</code></b></summary>
+<blockquote>
+
+O script tenta instalar `pandas` e `pyarrow` via `pip`. Se o `pip` não estiver no PATH, instale manualmente e rode de novo:
+
+```bash
+python3 -m pip install --user pandas pyarrow
+cd /workspaces/FIAP-Data-Warehouse-Lakehouse-e-Data-Mesh/03-Data-Modeling-e-Data-Warehouse/01-provisionamento
+bash scripts/load_tpch.sh
+```
+
+</blockquote>
+</details>
+
 ### 3. Conectar no Redshift
 
 Dois caminhos suportados. Escolha um:
@@ -154,6 +183,29 @@ Teste inicial:
 ```sql
 SELECT current_user, current_database(), version();
 ```
+
+<details>
+<summary><b>⚠ Se der erro: Query Editor v2 não conecta</b></summary>
+<blockquote>
+
+Verifique, em ordem:
+
+1. O cluster está `available`:
+
+   ```bash
+   aws redshift describe-clusters --query 'Clusters[*].ClusterStatus' --output text
+   ```
+
+2. O Security Group permite sua origem. Se `allowed_cidr_blocks = 0.0.0.0/0` (padrão do lab), isso não deveria bloquear. Se você restringiu, confira se seu IP público atual está incluído.
+3. A senha está correta. Pegue-a de novo, inteira e sem espaços:
+
+   ```bash
+   cd /workspaces/FIAP-Data-Warehouse-Lakehouse-e-Data-Mesh/03-Data-Modeling-e-Data-Warehouse/01-provisionamento
+   terraform output -raw redshift_master_password
+   ```
+
+</blockquote>
+</details>
 
 ### 4. Prossiga para o Lab 03.1
 
@@ -199,6 +251,15 @@ Tempo típico: **3 a 5 minutos**. Remove cluster, subnet group, SG, bucket (com 
 > [!CAUTION]
 > **Não esqueça deste passo.** Um cluster `ra3.large` esquecido consome budget do Learner Lab rapidamente. Aluno deve rodar `terraform destroy` **antes** de fechar o Codespaces ao final da sessão.
 
+<details>
+<summary><b>⚠ Se der erro: <code>InvalidClusterState</code> ao destruir logo após o apply</b></summary>
+<blockquote>
+
+O cluster ainda está em estado `modifying` ou `available` sendo estabilizado. Espere 1 minuto e rode `terraform destroy` de novo.
+
+</blockquote>
+</details>
+
 Para confirmar que tudo foi removido:
 
 ```bash
@@ -209,46 +270,19 @@ aws glue get-databases --query 'DatabaseList[?starts_with(Name, `tpch_raw_`)].Na
 
 Todos devem retornar vazio.
 
----
+<details>
+<summary><b>⚠ Se o bucket ainda aparecer após <code>terraform destroy</code></b></summary>
+<blockquote>
 
-## Troubleshooting
-
-### `Error: InvalidSubnet: No default VPC for this user`
-
-Alguma conta do Learner Lab não traz VPC default. Solução:
+O `force_destroy = true` deve limpar. Se sobrou algum objeto não removido, delete o bucket manualmente:
 
 ```bash
-aws ec2 create-default-vpc
+cd /workspaces/FIAP-Data-Warehouse-Lakehouse-e-Data-Mesh/03-Data-Modeling-e-Data-Warehouse/01-provisionamento
+aws s3 rb "s3://$(terraform output -raw s3_bucket_name 2>/dev/null || echo dw-lab-<ACCOUNT_ID>)" --force
 ```
 
-Depois, `terraform apply` novamente.
-
-### `Error: InvalidClusterState` ao dar destroy logo após apply
-
-O cluster ainda está em estado `modifying` ou `available` sendo estabilizado. Espere 1 min e tente de novo.
-
-### Query Editor v2 não conecta
-
-Verifique:
-1. O cluster está `available` (`aws redshift describe-clusters`)
-2. O SG permite sua origem. Se você estiver fora do Codespaces e o `allowed_cidr_blocks` estiver em `0.0.0.0/0`, isso não deveria bloquear.
-3. A senha está correta (use `terraform output -raw redshift_master_password` — copie inteiro, sem espaços).
-
-### `load_tpch.sh` falha com `import pandas`
-
-O script tenta instalar `pandas` e `pyarrow` via `pip`. Se o `pip` não estiver no PATH, instale manualmente:
-
-```bash
-python3 -m pip install --user pandas pyarrow
-```
-
-### Após `terraform destroy`, o bucket ainda aparece
-
-O `force_destroy = true` deve limpar. Se não, delete manualmente:
-
-```bash
-aws s3 rb s3://$(terraform output -raw s3_bucket_name 2>/dev/null || echo dw-lab-<ACCOUNT_ID>) --force
-```
+</blockquote>
+</details>
 
 ---
 
