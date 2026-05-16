@@ -57,7 +57,7 @@ bash scripts/init.sh
 terraform apply
 ```
 
-Tempo típico: **5 a 8 minutos** (o Redshift é o que mais demora).
+Tempo típico: **1m20 a 5 minutos** (o Redshift é o que mais demora; 2 nós ra3.large levam ~1m20 quando a região tem capacidade).
 
 <details>
 <summary><b>💡 Clique para entender: o que <code>scripts/init.sh</code> faz</b></summary>
@@ -149,14 +149,13 @@ cd /workspaces/FIAP-Data-Warehouse-Lakehouse-e-Data-Mesh/03-Data-Modeling-e-Data
 bash scripts/load_tpch.sh
 ```
 
-Tempo típico: **3 a 5 minutos**. O script:
+Tempo típico: **~1m40**. O script:
 
-1. Lê `terraform output` para descobrir bucket e região
-2. Baixa as 8 tabelas `.tbl` do TPC-H SF1 de `s3://redshift-downloads/TPC-H/2.18/1GB/` (bucket público da AWS)
-3. Converte cada uma para Parquet (snappy) localmente com Python + pyarrow
-4. **Gera a tabela sintética `customer_history`** — essencial para o Lab 03.1 simular SCD Tipo 2
-5. Envia tudo para `s3://<bucket>/raw/tpch/<tabela>/`
-6. Registra as 9 tabelas no Glue Data Catalog (para visualização no console)
+1. Lê `terraform output` para descobrir bucket de destino, região e Glue DB
+2. Copia (S3-to-S3, server-side, **em paralelo**) as 8 tabelas `.tbl` do TPC-H SF10 de `s3://redshift-downloads/TPC-H/2.18/10GB/` (bucket público da AWS) direto para `s3://<bucket-aluno>/raw/tpch/`
+3. Baixa apenas o `customer.tbl` (232 MB) localmente para gerar a tabela sintética `customer_history` (75k reclassificações com seed 42, essencial para o SCD2 do Lab 03.1)
+4. Faz upload do `customer_history.tbl` para o S3
+5. Registra as 9 tabelas no Glue Data Catalog (formato CSV `|` delimitado)
 
 <details>
 <summary><b>💡 Clique para entender: o que é customer_history e por que ela é injetada?</b></summary>

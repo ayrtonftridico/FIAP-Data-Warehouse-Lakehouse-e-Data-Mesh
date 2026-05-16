@@ -14,14 +14,14 @@ Neste laboratório, você sente na prática por que a modelagem raramente sobrev
 >
 > ```sql
 > SELECT COUNT(*) AS linhas_fato FROM dw_star.f_vendas;
-> -- Esperado: 6001215
+> -- Esperado: 59986052
 > ```
 >
 > Se retornar `relation "dw_star.f_vendas" does not exist` ou `0 linhas`, volte ao Lab 03.1 e complete a Parte 3 antes de seguir aqui.
 
 ## O que você vai fazer
 
-3 evoluções de negócio aplicadas sobre o `dw_star` existente, sem recarregar dados do zero. Tempo estimado: **60–75 min** em cluster `ra3.large` single-node.
+3 evoluções de negócio aplicadas sobre o `dw_star` existente, sem recarregar dados do zero. Tempo estimado: **60–75 min** em cluster `ra3.large` × 2 nós.
 
 1. **Evolução 1** — Nova fórmula de receita com comissão de marketplace (Views + Materialized Views versionadas)
 2. **Evolução 2** — Redefinição de "cliente ativo" (SCD Tipo 2 × fato snapshot periódico)
@@ -108,7 +108,7 @@ O resultado deve conter `dim_customer`, `dim_data`, `dim_geografia`, `dim_produt
 SELECT COUNT(*) AS linhas FROM dw_star.f_vendas;
 ```
 
-Esperado: **6.001.215** linhas.
+Esperado: **59.986.052** linhas.
 
 ### Checkpoint
 
@@ -147,7 +147,7 @@ ORDER BY pct_comissao;
 
 <!-- PRINT SUGERIDO: img/pct_comissao_distribuicao.png
      Tabela com comissões de 0.03 a 0.12 e a quantidade de fornecedores em cada faixa.
-     Deve dar ~1000 fornecedores por faixa (total 10000, 10 faixas). -->
+     Deve dar ~10000 fornecedores por faixa (total 100000, 10 faixas). -->
 ![](img/pct_comissao_distribuicao.png)
 
 <details>
@@ -564,7 +564,7 @@ Usa `LEAD()` para pegar a próxima transição e calcular `valid_to = próxima t
 
 ### Custo
 
-Este `INSERT` roda em poucos segundos mesmo com 150k clientes × 72 meses (10.8M pares). A chave é que window functions (`LAG`, `LEAD`, `ROW_NUMBER`) rodam bem paralelizadas em Redshift.
+Este `INSERT` roda em poucos segundos mesmo com 1,5M clientes × 72 meses (108M pares). A chave é que window functions (`LAG`, `LEAD`, `ROW_NUMBER`) rodam bem paralelizadas em Redshift — com 2 nós o paralelismo dobra.
 
 </blockquote>
 </details>
@@ -861,7 +861,7 @@ VACUUM dw_star.f_vendas;
 <summary><b>⚠ Se o redesign demorar muito</b></summary>
 <blockquote>
 
-Recriar `f_vendas` com dados copiados envolve mover 6M linhas. Em `ra3.large` single-node isso leva tipicamente **1 a 3 minutos** — é esperado, não é travamento. O `VACUUM` no final adiciona mais ~30 segundos.
+Recriar `f_vendas` com dados copiados envolve mover 60M linhas (SF10). Em `ra3.large` × 2 nós isso leva tipicamente **3 a 5 minutos** — é esperado, não é travamento. O `VACUUM` no final adiciona mais ~30 segundos.
 
 Se passar de 5 minutos, abra outra aba e confira se o cluster não está bloqueado por outra query concorrente:
 

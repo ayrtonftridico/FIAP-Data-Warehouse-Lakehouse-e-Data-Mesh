@@ -20,7 +20,7 @@ Neste laboratório, você vai responder **exatamente a mesma pergunta de negóci
 
 ## O que você vai fazer
 
-Três schemas no mesmo cluster Redshift, a mesma query-âncora rodada nos três, **três números diferentes**. Tempo estimado: **75–90 min** em cluster `ra3.large` single-node.
+Três schemas no mesmo cluster Redshift, a mesma query-âncora rodada nos três, **três números diferentes**. Tempo estimado: **75–95 min** em cluster `ra3.large` 2 nós, sendo ~12 min só para o `COPY` da Modelagem A (60M linhas em SF10).
 
 1. **Modelagem A** (`oltp_mirror`) — cópia fiel do OLTP → produz `N₁`
 2. **Modelagem B** (`dw_star`) — star schema SCD Tipo 1 → produz `N₂ ≈ N₁`
@@ -56,8 +56,8 @@ Ao final deste laboratório, você terá implementado três modelagens do mesmo 
 | Parte | O que você faz | Tempo |
 |-------|----------------|-------|
 | [Parte 1](#parte-1---acessando-o-redshift-pelo-query-editor-v2) | Acessa o Redshift pelo Query Editor v2 | ~5 min |
-| [Parte 2](#parte-2---modelagem-a-espelho-do-oltp) | Modelagem A — espelho OLTP → produz `N₁` | ~15 min |
-| [Parte 3](#parte-3---modelagem-b-star-schema-com-scd-tipo-1) | Modelagem B — star schema SCD1 → produz `N₂` | ~20 min |
+| [Parte 2](#parte-2---modelagem-a-espelho-do-oltp) | Modelagem A — espelho OLTP → produz `N₁` | ~25 min (12 min de COPY) |
+| [Parte 3](#parte-3---modelagem-b-star-schema-com-scd-tipo-1) | Modelagem B — star schema SCD1 → produz `N₂` | ~25 min |
 | [Parte 4](#parte-4---modelagem-c-star-schema-com-scd-tipo-2) | Modelagem C — star schema SCD2 → produz `N₃` | ~15 min |
 | [Parte 5](#parte-5---comparando-os-três-resultados) | Compara `N₁`, `N₂`, `N₃` e escreve `DECISION.md` | ~5 min |
 
@@ -115,7 +115,7 @@ Os três diagramas abaixo mostram **exatamente o mesmo dado físico** representa
 
 - Na **Modelagem A**, não existe fato nem dimensão — só 8 tabelas relacionais espelhando o OLTP. A lógica analítica é inteiramente construída na query.
 - Nas **Modelagens B e C**, os conceitos `FATO` e `DIMENSÃO` aparecem explicitamente (anotados nos diagramas). A fato concentra medidas; as dimensões concentram contexto descritivo.
-- A diferença entre B e C está **em uma única tabela**: `dim_customer`. No B ela tem 150k linhas (SCD1); no C tem ~157k linhas versionadas (SCD2) com colunas temporais.
+- A diferença entre B e C está **em uma única tabela**: `dim_customer`. No B ela tem 1,5M linhas (SCD1); no C tem ~1,575M linhas versionadas (SCD2) com colunas temporais.
 
 #### Modelagem A · `oltp_mirror` (relacional, sem distinção fato/dimensão)
 
@@ -547,12 +547,16 @@ SELECT current_user_id() AS user, current_aws_account() AS account_id;
 COPY oltp_mirror.region
 FROM 's3://dw-lab-<SEU_ACCOUNT_ID>/raw/tpch/region/'
 IAM_ROLE default
-FORMAT AS PARQUET;
+FORMAT AS CSV DELIMITER '|'
+COMPUPDATE OFF
+STATUPDATE OFF;
 
 COPY oltp_mirror.nation
 FROM 's3://dw-lab-<SEU_ACCOUNT_ID>/raw/tpch/nation/'
 IAM_ROLE default
-FORMAT AS PARQUET;
+FORMAT AS CSV DELIMITER '|'
+COMPUPDATE OFF
+STATUPDATE OFF;
 
 -- Checkpoint do lote 1: deve retornar region=5, nation=25
 SELECT 'region' AS tbl, COUNT(*) AS linhas FROM oltp_mirror.region
@@ -565,24 +569,32 @@ UNION ALL SELECT 'nation', COUNT(*) FROM oltp_mirror.nation;
 COPY oltp_mirror.customer
 FROM 's3://dw-lab-<SEU_ACCOUNT_ID>/raw/tpch/customer/'
 IAM_ROLE default
-FORMAT AS PARQUET;
+FORMAT AS CSV DELIMITER '|'
+COMPUPDATE OFF
+STATUPDATE OFF;
 
 COPY oltp_mirror.supplier
 FROM 's3://dw-lab-<SEU_ACCOUNT_ID>/raw/tpch/supplier/'
 IAM_ROLE default
-FORMAT AS PARQUET;
+FORMAT AS CSV DELIMITER '|'
+COMPUPDATE OFF
+STATUPDATE OFF;
 
 COPY oltp_mirror.part
 FROM 's3://dw-lab-<SEU_ACCOUNT_ID>/raw/tpch/part/'
 IAM_ROLE default
-FORMAT AS PARQUET;
+FORMAT AS CSV DELIMITER '|'
+COMPUPDATE OFF
+STATUPDATE OFF;
 
 COPY oltp_mirror.partsupp
 FROM 's3://dw-lab-<SEU_ACCOUNT_ID>/raw/tpch/partsupp/'
 IAM_ROLE default
-FORMAT AS PARQUET;
+FORMAT AS CSV DELIMITER '|'
+COMPUPDATE OFF
+STATUPDATE OFF;
 
--- Checkpoint do lote 2: customer=150000, supplier=10000, part=200000, partsupp=800000
+-- Checkpoint do lote 2: customer=1500000, supplier=100000, part=2000000, partsupp=8000000
 SELECT 'customer' AS tbl, COUNT(*) AS linhas FROM oltp_mirror.customer
 UNION ALL SELECT 'supplier', COUNT(*) FROM oltp_mirror.supplier
 UNION ALL SELECT 'part',     COUNT(*) FROM oltp_mirror.part
@@ -595,20 +607,24 @@ UNION ALL SELECT 'partsupp', COUNT(*) FROM oltp_mirror.partsupp;
 COPY oltp_mirror.orders
 FROM 's3://dw-lab-<SEU_ACCOUNT_ID>/raw/tpch/orders/'
 IAM_ROLE default
-FORMAT AS PARQUET;
+FORMAT AS CSV DELIMITER '|'
+COMPUPDATE OFF
+STATUPDATE OFF;
 
 COPY oltp_mirror.lineitem
 FROM 's3://dw-lab-<SEU_ACCOUNT_ID>/raw/tpch/lineitem/'
 IAM_ROLE default
-FORMAT AS PARQUET;
+FORMAT AS CSV DELIMITER '|'
+COMPUPDATE OFF
+STATUPDATE OFF;
 
--- Checkpoint do lote 3: orders=1.500.000, lineitem=6.001.215
+-- Checkpoint do lote 3: orders=15.000.000, lineitem=59.986.052
 SELECT 'orders'   AS tbl, COUNT(*) AS linhas FROM oltp_mirror.orders
 UNION ALL SELECT 'lineitem', COUNT(*) FROM oltp_mirror.lineitem;
 ```
 
 > [!TIP]
-> `lineitem` é a maior tabela (~600 MB em Parquet) e demora de 1 a 2 minutos. Se parecer travado, confira no console Redshift se a query ainda está rodando — não cancele antes.
+> `lineitem` é a maior tabela (~7,2 GB de texto SF10, ~60M linhas) e demora **~6 min** no cluster com 2 nós + `COMPUPDATE OFF`. `orders` (~15M linhas) leva **~1m30**. Se parecer travado, confira no console Redshift se a query ainda está rodando — não cancele antes.
 
 <details>
 <summary><b>💡 Clique para entender: o comando COPY no Redshift</b></summary>
@@ -620,7 +636,13 @@ O `COPY` é a forma canônica de carregar grandes volumes para o Redshift. Ele �
 
 - `FROM 's3://...'` aponta para o prefixo no S3. O Redshift lista todos os arquivos sob o prefixo e distribui entre os slices.
 - `IAM_ROLE default` diz "use a role padrão do cluster". No Terraform do Lab 03, configuramos `default_iam_role_arn = LabRole`, então nunca precisamos colar ARN explícito.
-- `FORMAT AS PARQUET` informa o formato. O Redshift deduz colunas/tipos pelo schema Parquet e faz mapping para as colunas da tabela pelo nome.
+- `FORMAT AS CSV DELIMITER '|'` informa que o arquivo é texto delimitado por `|` — formato nativo do TPC-H. Cada linha do arquivo vira uma linha da tabela; ordem das colunas no arquivo deve bater com a ordem no `CREATE TABLE`.
+- `COMPUPDATE OFF` desliga a análise automática de encoding de colunas. Em tabelas pequenas isso é útil para o Redshift escolher compressão; em tabelas grandes a análise demora mais que a carga em si. Para laboratório (cluster descartável), sempre desligar.
+- `STATUPDATE OFF` desliga atualização automática de estatísticas. Vamos rodar `ANALYZE` explicitamente no passo seguinte — fica mais didático e mais rápido.
+
+### Por que CSV e não Parquet
+
+O dataset TPC-H está em formato `.tbl` (texto delimitado por `|`) no bucket público da AWS. Mantemos o formato original — copiar para o bucket do aluno é S3-to-S3 e leva ~2 min em vez dos ~30 min que pandas+pyarrow gastariam para converter para Parquet localmente. **No mundo real**, ETLs em produção convertem para Parquet uma vez e armazenam — esse é o ponto da próxima aula (Lakehouse).
 
 ### Por que não usar `INSERT SELECT` a partir de uma tabela externa
 
@@ -628,11 +650,13 @@ Em ambientes onde Spectrum está disponível, você poderia criar uma external t
 
 ### Paralelismo implícito
 
-Cada slice do cluster puxa uma parte dos arquivos do S3. Mais arquivos Parquet = mais paralelismo. Nosso script `load_tpch.sh` gera 1 Parquet por tabela, então o paralelismo é limitado — em produção, split em vários arquivos maximiza throughput.
+Cada slice do cluster puxa uma parte do arquivo via byte-range. Com 2 nós × 2 slices/nó = **4 slices** processando o `lineitem.tbl` em paralelo. Em produção, splitar `lineitem` em N arquivos pequenos maximiza ainda mais o throughput — o Redshift recomenda 1 arquivo por slice no mínimo.
 
 Documentação oficial:
+
 - [COPY from Amazon S3](https://docs.aws.amazon.com/redshift/latest/dg/copy-parameters-data-source-s3.html)
-- [COPY from columnar data formats](https://docs.aws.amazon.com/redshift/latest/dg/copy-usage_notes-copy-from-columnar.html)
+- [COPY from CSV](https://docs.aws.amazon.com/redshift/latest/dg/copy-usage_notes-copy-from-text.html)
+- [Loading data — best practices](https://docs.aws.amazon.com/redshift/latest/dg/c_loading-data-best-practices.html)
 
 </blockquote>
 </details>
@@ -650,24 +674,24 @@ ANALYZE oltp_mirror.orders;
 ANALYZE oltp_mirror.lineitem;
 ```
 
-9. Confirme que os volumes batem com o TPC-H SF1. **Essa é sua primeira âncora de confiança** — se os números aqui não batem, **não siga adiante**. Qualquer divergência na query-âncora (passo 10) vai ser causada por problema aqui, e você gasta 20 minutos debugando a query para descobrir que a carga falhou:
+9. Confirme que os volumes batem com o TPC-H SF10. **Essa é sua primeira âncora de confiança** — se os números aqui não batem, **não siga adiante**. Qualquer divergência na query-âncora (passo 10) vai ser causada por problema aqui, e você gasta 20 minutos debugando a query para descobrir que a carga falhou:
 
 ```sql
-SELECT 'region'   AS tbl, COUNT(*) AS linhas, 5        AS esperado FROM oltp_mirror.region
+SELECT 'region'   AS tbl, COUNT(*) AS linhas,         5 AS esperado FROM oltp_mirror.region
 UNION ALL
-SELECT 'nation'   AS tbl, COUNT(*) AS linhas, 25       AS esperado FROM oltp_mirror.nation
+SELECT 'nation'   AS tbl, COUNT(*) AS linhas,        25 AS esperado FROM oltp_mirror.nation
 UNION ALL
-SELECT 'customer' AS tbl, COUNT(*) AS linhas, 150000   AS esperado FROM oltp_mirror.customer
+SELECT 'customer' AS tbl, COUNT(*) AS linhas,   1500000 AS esperado FROM oltp_mirror.customer
 UNION ALL
-SELECT 'supplier' AS tbl, COUNT(*) AS linhas, 10000    AS esperado FROM oltp_mirror.supplier
+SELECT 'supplier' AS tbl, COUNT(*) AS linhas,    100000 AS esperado FROM oltp_mirror.supplier
 UNION ALL
-SELECT 'part'     AS tbl, COUNT(*) AS linhas, 200000   AS esperado FROM oltp_mirror.part
+SELECT 'part'     AS tbl, COUNT(*) AS linhas,   2000000 AS esperado FROM oltp_mirror.part
 UNION ALL
-SELECT 'partsupp' AS tbl, COUNT(*) AS linhas, 800000   AS esperado FROM oltp_mirror.partsupp
+SELECT 'partsupp' AS tbl, COUNT(*) AS linhas,   8000000 AS esperado FROM oltp_mirror.partsupp
 UNION ALL
-SELECT 'orders'   AS tbl, COUNT(*) AS linhas, 1500000  AS esperado FROM oltp_mirror.orders
+SELECT 'orders'   AS tbl, COUNT(*) AS linhas,  15000000 AS esperado FROM oltp_mirror.orders
 UNION ALL
-SELECT 'lineitem' AS tbl, COUNT(*) AS linhas, 6001215  AS esperado FROM oltp_mirror.lineitem
+SELECT 'lineitem' AS tbl, COUNT(*) AS linhas,  59986052 AS esperado FROM oltp_mirror.lineitem
 ORDER BY tbl;
 ```
 
@@ -966,7 +990,7 @@ FROM oltp_mirror.customer c;
 
 ANALYZE dw_star.dim_customer;
 
--- Checkpoint: esperado 150.000 linhas (1:1 com oltp_mirror.customer)
+-- Checkpoint: esperado 1.500.000 linhas (1:1 com oltp_mirror.customer)
 SELECT COUNT(*) AS linhas FROM dw_star.dim_customer;
 ```
 
@@ -1002,7 +1026,7 @@ FROM oltp_mirror.part p;
 
 ANALYZE dw_star.dim_produto;
 
--- Checkpoint: esperado 200.000 linhas
+-- Checkpoint: esperado 2.000.000 linhas
 SELECT COUNT(*) AS linhas FROM dw_star.dim_produto;
 ```
 
@@ -1030,7 +1054,7 @@ FROM oltp_mirror.supplier s;
 
 ANALYZE dw_star.dim_supplier;
 
--- Checkpoint: esperado 10.000 linhas
+-- Checkpoint: esperado 100.000 linhas
 SELECT COUNT(*) AS linhas FROM dw_star.dim_supplier;
 ```
 
@@ -1080,7 +1104,7 @@ SELECT 'dim_supplier',  COUNT(*) FROM dw_star.dim_supplier
 ORDER BY dim;
 ```
 
-Esperado: dim_data=2557, dim_geografia=25, dim_customer=150000, dim_produto=200000, dim_supplier=10000.
+Esperado: dim_data=2557, dim_geografia=25, dim_customer=1500000, dim_produto=2000000, dim_supplier=100000.
 
 <!-- PRINT SUGERIDO: img/dw_star_dims_loaded.png
      Resultado das 5 dimensões com contagem correspondente.
@@ -1252,7 +1276,7 @@ Se você chegou até aqui, então:
 
 Ao final desta etapa, o schema `dw_star_scd2` terá uma `dim_customer` versionada com histórico de segmento e uma fato `f_vendas` apontando para a versão vigente na data de cada pedido. A query-âncora vai produzir `N₃`, **diferente** de `N₁` e `N₂`.
 
-19. Crie o schema e carregue a tabela auxiliar `customer_history`. Essa tabela foi gerada sinteticamente pelo `load_tpch.sh` e contém reclassificações de segmento pós-1995 em **exatamente ~7.500 clientes** (5% da base SF1 de 150k, amostragem determinística com seed `42` — todo aluno obtém o mesmo conjunto):
+19. Crie o schema e carregue a tabela auxiliar `customer_history`. Essa tabela foi gerada sinteticamente pelo `load_tpch.sh` e contém reclassificações de segmento pós-1995 em **exatamente ~75.000 clientes** (5% da base SF10 de 1,5M, amostragem determinística com seed `42` — todo aluno obtém o mesmo conjunto):
 
 ```sql
 DROP SCHEMA IF EXISTS dw_star_scd2 CASCADE;
@@ -1273,17 +1297,19 @@ SORTKEY (c_custkey);
 COPY dw_star_scd2.customer_history
 FROM 's3://dw-lab-<SEU_ACCOUNT_ID>/raw/tpch/customer_history/'
 IAM_ROLE default
-FORMAT AS PARQUET;
+FORMAT AS CSV DELIMITER '|'
+COMPUPDATE OFF
+STATUPDATE OFF;
 
 ANALYZE dw_star_scd2.customer_history;
 
 SELECT COUNT(*) AS reclassificacoes FROM dw_star_scd2.customer_history;
 ```
 
-O resultado esperado é **exatamente ~7.500 linhas** (5% de 150k clientes, seed `42`). Esse número é determinístico — se você obteve outro valor, a carga falhou e você deve revisar o passo anterior antes de seguir.
+O resultado esperado é **exatamente ~75.000 linhas** (5% de 1,5M clientes, seed `42`). Esse número é determinístico — se você obteve outro valor, a carga falhou e você deve revisar o passo anterior antes de seguir.
 
 <!-- PRINT SUGERIDO: img/customer_history_loaded.png
-     Resultado mostrando ~7500 reclassificações carregadas. -->
+     Resultado mostrando ~75.000 reclassificações carregadas. -->
 ![](img/customer_history_loaded.png)
 
 21. Crie a `dim_customer` versionada. Ela terá uma linha para clientes sem histórico e duas linhas para os reclassificados (versão original + versão nova):
@@ -1415,7 +1441,7 @@ SELECT
 FROM dw_star_scd2.dim_customer;
 ```
 
-Os checks 1 e 2 devem retornar **0**. O check 3 deve mostrar ~150k clientes, ~157k linhas totais (150k atuais + 7.5k históricas).
+Os checks 1 e 2 devem retornar **0**. O check 3 deve mostrar 1,5M clientes, ~1,575M linhas totais (1,5M atuais + 75k históricas).
 
 <!-- PRINT SUGERIDO: img/scd2_integrity_checks.png
      Os 3 checks com os resultados corretos. O 0+0 nos dois primeiros é a evidência de que a SCD2 foi construída certinho. -->
@@ -1516,7 +1542,7 @@ Muitos warehouses produtivos encapsulam esse join em uma **view** que esconde a 
 </blockquote>
 </details>
 
-24. Confirme que a fato tem o mesmo grain da B (6.001.215 linhas):
+24. Confirme que a fato tem o mesmo grain da B (59.986.052 linhas):
 
 ```sql
 SELECT COUNT(*) AS linhas FROM dw_star_scd2.f_vendas;
@@ -1554,8 +1580,8 @@ ORDER BY receita_liquida_1995_automobile DESC;
 
 Se você chegou até aqui, então:
 
-- a `dim_customer` SCD2 tem ~157k linhas versionadas e passa nos 3 checks de integridade
-- a fato `f_vendas` do SCD2 tem 6.001.215 linhas
+- a `dim_customer` SCD2 tem ~1,575M linhas versionadas e passa nos 3 checks de integridade
+- a fato `f_vendas` do SCD2 tem 59.986.052 linhas
 - você anotou `N₃`, que deve diferir de `N₁` e `N₂`
 
 ---
@@ -1575,7 +1601,7 @@ Ao final desta etapa, você terá colocado os 3 números lado a lado, entendido 
 | C — Star SCD2 | `N₃ = _______` | Segmento que o cliente tinha **em 1995** | **`N₃ ≠ N₁`** — diferença de ~5% dos clientes reclassificados |
 
 > [!NOTE]
-> **Calibração**: TPC-H SF1 é determinístico e `customer_history` é gerada com seed `42` — qualquer pessoa do curso que rodar os mesmos passos chega nos **mesmos 3 números**. Compare com um colega; se `N₁` diferir, tem erro de carga. Se `N₂ ≠ N₁`, tem bug no upsert SCD1. Se `N₃ = N₁`, o SCD2 não está usando o range temporal no JOIN.
+> **Calibração**: TPC-H SF10 é determinístico e `customer_history` é gerada com seed `42` — qualquer pessoa do curso que rodar os mesmos passos chega nos **mesmos 3 números**. Compare com um colega; se `N₁` diferir, tem erro de carga. Se `N₂ ≠ N₁`, tem bug no upsert SCD1. Se `N₃ = N₁`, o SCD2 não está usando o range temporal no JOIN.
 
 27. Rode esta query bônus para ver quantos clientes foram reclassificados no "para dentro" ou "para fora" de `AUTOMOBILE`. Isso quantifica a divergência:
 
