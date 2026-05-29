@@ -58,7 +58,7 @@ Fonte editável: [`img/arquitetura-trabalho-final.drawio`](img/arquitetura-traba
 
 ## O que você terá ao final
 
-Uma tabela `pedidos_iceberg` populada com **100.003 pedidos** (100k iniciais + 3 inseridos via MERGE), uma query que devolve os 5 maiores clientes por receita líquida, e um `DECISION.md` defendendo como você evoluiria o lakehouse se a TPCH crescesse 100×.
+Uma tabela `pedidos_iceberg` populada com **100.003 pedidos** (100k iniciais + 3 inseridos via MERGE), uma query que devolve os 5 maiores clientes por receita líquida, e um `DECISION.md` defendendo como você evoluiria o lakehouse se a TPCH crescesse 100×. Tudo isso empacotado em um `.zip` e enviado no **portal FIAP** da sua turma — o formato de entrega é parte do trabalho (Tarefa 10).
 
 > [!TIP]
 > Sempre que encontrar um bloco com o título **💡 Clique para entender**, abra esse trecho. Ele traz explicação detalhada do contexto e dicas de como abordar a tarefa — sem dar o SQL pronto.
@@ -159,7 +159,8 @@ Como ler o diagrama:
 | [Tarefa 7](#tarefa-7---otimizar-a-tabela) | `OPTIMIZE` (BIN_PACK) + `VACUUM` | [16](#passo-16) · [17](#passo-17) · [18](#passo-18) | ~15 min |
 | [Tarefa 8](#tarefa-8---entrega-da-query-executiva) | Top 5 clientes por receita líquida | [19](#passo-19) · [20](#passo-20) | ~10 min |
 | [Tarefa 9](#tarefa-9---escrever-decisionmd) | Defender a evolução técnica em ADR | [21](#passo-21) | ~30 min |
-| [Tarefa 10](#tarefa-10---limpeza) | Limpa S3 + Glue para preservar budget Learner Lab | [22](#passo-22) | ~5 min |
+| [Tarefa 10](#tarefa-10---empacotar-e-enviar-no-portal-fiap) | Monta o zip de entrega e sobe no portal FIAP | [22](#passo-22) · [23](#passo-23) | ~10 min |
+| [Tarefa 11](#tarefa-11---limpeza) | Limpa S3 + Glue para preservar budget Learner Lab | [24](#passo-24) | ~5 min |
 
 > [!TIP]
 > Se travou em algum passo, clique no número correspondente acima.
@@ -885,7 +886,118 @@ Um arquivo `DECISION.md` (estilo ADR — Architecture Decision Record) defendend
 
 ---
 
-## Tarefa 10 - Limpeza
+## Tarefa 10 - Empacotar e enviar no portal FIAP
+
+### Resultado esperado desta tarefa
+
+Um arquivo `.zip` com **estrutura exata** abaixo, que você sobe no **portal FIAP** no espaço do trabalho que o professor criou para a sua turma.
+
+> [!IMPORTANT]
+> O **formato de entrega importa**. O professor corrige dezenas de trabalhos por turma — uma estrutura inconsistente atrasa a correção e pode custar pontos. Siga a estrutura abaixo **literalmente**.
+
+### Estrutura obrigatória do zip
+
+```
+trabalho-final-<SEU_RM>.zip
+└── trabalho-final-<SEU_RM>/
+    ├── sql/
+    │   ├── 01_create_iceberg_tables.sql
+    │   ├── 02_insert_data.sql
+    │   ├── 03_add_calculated_column.sql
+    │   ├── 04_merge_delta.sql
+    │   ├── 05_optimize.sql
+    │   └── 06_query_executiva.sql
+    ├── prints/
+    │   ├── 01_glue_crawler_3_tabelas.png       (Tarefa 2: console Glue mostrando clientes/pedidos/pedidos_delta)
+    │   ├── 02_show_create_iceberg.png          (Tarefa 3: SHOW CREATE TABLE pedidos_iceberg com TBLPROPERTIES Iceberg)
+    │   ├── 03_count_apos_merge.png             (Tarefa 6: SELECT COUNT(*) FROM pedidos_iceberg = 100003)
+    │   └── 04_top5_clientes.png                (Tarefa 8: resultado das 5 linhas da query executiva)
+    └── DECISION.md
+```
+
+**Detalhes:**
+
+- **`<SEU_RM>`** é o seu RM da FIAP (ex: `RM355678`). Use letras maiúsculas, sem espaços.
+- Cada `.sql` é o **arquivo que você efetivamente rodou no Athena** — não a versão do gabarito, não o seu rascunho. Limpo, comentado, com `<ACCOUNT_ID>` substituído pelo seu valor.
+- Cada `.png` é um screenshot **legível** (sem zoom de microscópio nem janela cortada). Se não couber tudo, prefira 2 screenshots (`04a_...png`, `04b_...png`).
+- `DECISION.md` é o que você escreveu na Tarefa 9.
+
+---
+
+<a id="passo-22"></a>
+
+**22.** Monte a pasta de entrega no Codespaces:
+
+```bash
+cd /workspaces/FIAP-Data-Warehouse-Lakehouse-e-Data-Mesh/04-Trabalho-Final && \
+  mkdir -p entrega/trabalho-final-<SEU_RM>/sql && \
+  mkdir -p entrega/trabalho-final-<SEU_RM>/prints && \
+  echo "Pasta entrega/ criada. Copie seus arquivos para sql/ e prints/, e mova o DECISION.md para a raiz."
+```
+
+> [!TIP]
+> Substitua `<SEU_RM>` pelo seu RM real **antes** de rodar (ex: `RM355678`). O comando cria uma pasta com esse nome — se errar, é só rodar de novo com o nome correto e apagar a errada.
+
+Cole seus 6 SQLs em `entrega/trabalho-final-<SEU_RM>/sql/`. Cole seus 4 prints em `entrega/trabalho-final-<SEU_RM>/prints/`. Mova o `DECISION.md` para `entrega/trabalho-final-<SEU_RM>/`.
+
+Confira a estrutura final:
+
+```bash
+cd /workspaces/FIAP-Data-Warehouse-Lakehouse-e-Data-Mesh/04-Trabalho-Final && \
+  find entrega/trabalho-final-<SEU_RM> -type f | sort
+```
+
+Esperado: 11 linhas (6 SQLs + 4 PNGs + 1 DECISION.md).
+
+<details>
+<summary><b>⚠ Se faltar arquivo: revise as Tarefas 2-9</b></summary>
+<blockquote>
+
+| Arquivo faltando | Volte para |
+|---|---|
+| `01_create_iceberg_tables.sql` | Tarefa 3 (passos 6 e 7) |
+| `02_insert_data.sql` | Tarefa 4 (passos 8 e 9) |
+| `03_add_calculated_column.sql` | Tarefa 5 (passos 10 e 11) |
+| `04_merge_delta.sql` | Tarefa 6 (passos 13 e 14) |
+| `05_optimize.sql` | Tarefa 7 (passo 17) |
+| `06_query_executiva.sql` | Tarefa 8 (passo 19) |
+| `01_glue_crawler_3_tabelas.png` | Tarefa 2 (depois do passo 4 — console Glue) |
+| `02_show_create_iceberg.png` | Tarefa 3 (depois do passo 7 — `SHOW CREATE TABLE pedidos_iceberg`) |
+| `03_count_apos_merge.png` | Tarefa 6 (depois do passo 15 — `COUNT(*) = 100003`) |
+| `04_top5_clientes.png` | Tarefa 8 (depois do passo 19) |
+| `DECISION.md` | Tarefa 9 (passo 21) |
+
+</blockquote>
+</details>
+
+---
+
+<a id="passo-23"></a>
+
+**23.** Gere o zip final:
+
+```bash
+cd /workspaces/FIAP-Data-Warehouse-Lakehouse-e-Data-Mesh/04-Trabalho-Final/entrega && \
+  zip -r trabalho-final-<SEU_RM>.zip trabalho-final-<SEU_RM>/ && \
+  ls -lh trabalho-final-<SEU_RM>.zip
+```
+
+Esperado: arquivo entre 200 KB e 5 MB (depende do tamanho dos prints).
+
+Faça upload no **portal FIAP**, no espaço do **trabalho que o professor criou para a sua turma** (não há link único — cada turma tem o seu).
+
+> [!CAUTION]
+> O upload no portal é **a única forma de submissão válida**. Repositório próprio, e-mail, Slack: nada disso conta como entrega. Se o portal não aceitar (timeout, formato), abra issue ou e-mail antes do prazo — depois do prazo a submissão fora do portal não é aceita.
+
+### Checkpoint
+
+- [ ] `trabalho-final-<SEU_RM>.zip` validado com `find` (11 arquivos)
+- [ ] Upload feito no portal FIAP **antes do prazo da sua turma**
+- [ ] Confirmação visual de que o portal aceitou o arquivo
+
+---
+
+## Tarefa 11 - Limpeza
 
 ### Resultado esperado desta tarefa
 
@@ -893,9 +1005,9 @@ Bucket S3 vazio e tabelas Glue removidas. Conta AWS limpa, Learner Lab budget pr
 
 ---
 
-<a id="passo-22"></a>
+<a id="passo-24"></a>
 
-**22.** Limpe os recursos. **Esta etapa é obrigatória** — esquecer de limpar consome budget do Learner Lab.
+**24.** Limpe os recursos. **Esta etapa é obrigatória** — esquecer de limpar consome budget do Learner Lab.
 
 ```bash
 # Esvazia o bucket (necessario antes de deletar)
