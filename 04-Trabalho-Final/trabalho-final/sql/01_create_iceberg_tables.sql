@@ -1,18 +1,7 @@
--- =====================================================================
--- Tarefa 3 - Criar tabelas Iceberg vazias
--- ---------------------------------------------------------------------
--- Cria as duas tabelas Iceberg principais (entregaveis) no database
--- `trabalho_final_aluno`, vazias. A carga vem na Tarefa 4 (02_insert_data.sql).
---
--- Account ID usado: 163234203185
--- Bucket:            s3://tf-aluno-163234203185
--- Engine:            Amazon Athena (Iceberg)
--- =====================================================================
+-- Cria as duas tabelas Iceberg vazias no database trabalho_final_aluno.
+-- data_pedido ja nasce como DATE (na raw vem como STRING, converto na carga).
+-- valor_final entra depois, via ALTER TABLE.
 
--- ---------------------------------------------------------------------
--- 3.1 - clientes_iceberg
--- Espelha o schema final dos clientes (ja com tipos corretos).
--- ---------------------------------------------------------------------
 CREATE TABLE trabalho_final_aluno.clientes_iceberg (
     id_cliente      STRING,
     nome            STRING,
@@ -29,12 +18,6 @@ TBLPROPERTIES (
     'write_compression' = 'zstd'
 );
 
--- ---------------------------------------------------------------------
--- 3.2 - pedidos_iceberg
--- Atencao: data_pedido ja nasce como DATE (na raw vem como STRING).
--- A conversao acontece na carga (Tarefa 4) via CAST.
--- valor_final sera adicionado depois (Tarefa 5) via ALTER TABLE.
--- ---------------------------------------------------------------------
 CREATE TABLE trabalho_final_aluno.pedidos_iceberg (
     id_pedido         STRING,
     id_cliente        STRING,
@@ -52,10 +35,8 @@ TBLPROPERTIES (
     'write_compression' = 'zstd'
 );
 
--- ---------------------------------------------------------------------
--- Validacao (rodar separadamente no console Athena)
--- ---------------------------------------------------------------------
--- SHOW TABLES IN trabalho_final_aluno;            -- espera 5 tabelas (3 raw + 2 iceberg)
--- DESCRIBE trabalho_final_aluno.pedidos_iceberg;  -- data_pedido deve aparecer como date
--- SELECT COUNT(*) FROM trabalho_final_aluno.pedidos_iceberg;  -- espera 0
--- SHOW CREATE TABLE trabalho_final_aluno.pedidos_iceberg;     -- para o print 01_show_create_iceberg.png
+-- validacoes (rodei cada uma no console)
+SHOW TABLES IN trabalho_final_aluno;                       -- 5 tabelas: 3 raw + 2 iceberg
+DESCRIBE trabalho_final_aluno.pedidos_iceberg;             -- data_pedido aparece como date
+SELECT COUNT(*) FROM trabalho_final_aluno.pedidos_iceberg; -- 0
+SHOW CREATE TABLE trabalho_final_aluno.pedidos_iceberg;    -- print 01_show_create_iceberg.png
